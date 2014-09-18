@@ -23,18 +23,20 @@ module RedmineTargetVersionStatusFilter
               op = operator_for('target_version_status')
               
               project_versions = Version.where(:project_id => project_id)
+              apply_filter = true
               case op
               when '=', '!'
                 ids_list = project_versions.where(:status => value_for('target_version_status').clone).pluck(:id).push(0)
               when '!*'
                 ids_list = []
+                apply_filter = false
                 clauses << " AND " unless clauses.empty?
                 clauses << "( #{Issue.table_name}.fixed_version_id IS NULL ) "
               else
                 ids_list = project_versions.pluck(:id).push(0)
               end
-
-              if ids_list.count > 0
+              ids_list << 0
+              if apply_filter
                 compare   = op.eql?('!') ? 'NOT IN' : 'IN'
                 ids_list = ids_list.join(', ')
 
