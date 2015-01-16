@@ -1,3 +1,8 @@
+require_dependency 'query'
+if ActiveSupport::Dependencies::search_for_file('issue_query')
+  require_dependency 'issue_query'
+end
+
 module RedmineTargetVersionStatusFilter
   module Patches
     module IssueQueryPatch
@@ -8,7 +13,8 @@ module RedmineTargetVersionStatusFilter
         base.class_eval do
           unloadable # Send unloadable so it will not be unloaded in development
           alias_method_chain :statement, :target_version_status
-          alias_method_chain :available_filters, :target_version_status
+          alias_method :available_filters_without_target_version_status, :available_filters
+          alias_method :available_filters, :available_filters_with_target_version_status
         end
       end
 
@@ -21,7 +27,7 @@ module RedmineTargetVersionStatusFilter
               filters.merge!( 'target_version_status' => filter )
 
               op = operator_for('target_version_status')
-              
+
               project_versions = Version.where(:project_id => project_id)
               apply_filter = true
               case op
@@ -48,18 +54,24 @@ module RedmineTargetVersionStatusFilter
         end
 
         def available_filters_with_target_version_status
-          available_filters_without_target_version_status
-          @available_filters.merge!({ 'target_version_status' => {
-            :name   => l(:target_version_status),
-            :type   => :list_optional,
-            :order  => 7,
-            :values => Version::VERSION_STATUSES.collect{ |t| [t, t] }
-          }})
+          unless @available_filters
+            available_filters_without_target_version_status.merge!({
+              'target_version_status' => {
+                :name   => l(:target_version_status),
+                :type   => :list_optional,
+                :order  => 7,
+                :values => Version::VERSION_STATUSES.collect{ |t| [t, t] }
+              }
+            })
+          end
           @available_filters
         end
       end
     end
   end
 end
-# Add module to Query
-IssueQuery.send(:include, RedmineTargetVersionStatusFilter::Patches::IssueQueryPatch)
+
+base = ActiveSupport::Dependencies::search_for_file('issue_query') ? IssueQuery : Query
+unless base.included_modules.include?(RedmineTargetVersionStatusFilter::Patches::IssueQueryPatch)
+  base.send(:include, RedmineTargetVersionStatusFilter::Patches::IssueQueryPatch)
+end
