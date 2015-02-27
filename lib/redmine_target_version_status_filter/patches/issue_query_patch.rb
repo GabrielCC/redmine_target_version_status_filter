@@ -6,12 +6,11 @@ end
 module RedmineTargetVersionStatusFilter
   module Patches
     module IssueQueryPatch
-      def self.included(base) # :nodoc:
+      def self.included(base)
         base.send(:include, InstanceMethods)
 
-        # Same as typing in the class
         base.class_eval do
-          unloadable # Send unloadable so it will not be unloaded in development
+          unloadable
           alias_method_chain :statement, :target_version_status
           alias_method :available_filters_without_target_version_status, :available_filters
           alias_method :available_filters, :available_filters_with_target_version_status
@@ -22,7 +21,7 @@ module RedmineTargetVersionStatusFilter
 
         def statement_with_target_version_status
             filter  = filters.delete 'target_version_status'
-            clauses = statement_without_target_version_status || ""
+            clauses = statement_without_target_version_status || ''
             if filter
               filters.merge!( 'target_version_status' => filter )
 
@@ -36,7 +35,7 @@ module RedmineTargetVersionStatusFilter
               when '!*'
                 ids_list = []
                 apply_filter = false
-                clauses << " AND " unless clauses.empty?
+                clauses << ' AND ' unless clauses.empty?
                 clauses << "( #{Issue.table_name}.fixed_version_id IS NULL ) "
               else
                 ids_list = project_versions.pluck(:id).push(0)
@@ -46,7 +45,7 @@ module RedmineTargetVersionStatusFilter
                 compare   = op.eql?('!') ? 'NOT IN' : 'IN'
                 ids_list = ids_list.join(', ')
 
-                clauses << " AND " unless clauses.empty?
+                clauses << ' AND ' unless clauses.empty?
                 clauses << "( #{Issue.table_name}.fixed_version_id #{compare} (#{ids_list}) ) "
               end
             end
@@ -60,7 +59,7 @@ module RedmineTargetVersionStatusFilter
                 :name   => l(:target_version_status),
                 :type   => :list_optional,
                 :order  => 7,
-                :values => Version::VERSION_STATUSES.collect{ |t| [t, t] }
+                :values => Version::VERSION_STATUSES.map{ |t| [t, t] } << ['current', 'current']
               }
             })
           end
