@@ -30,15 +30,20 @@ module RedmineTargetVersionStatusFilter
               version_status = value_for('target_version_status')
               if version_status == 'current'
                 ids_list = [0]
+                candidate_versions = []
                 current_date = Date.today
-                ids_list <<  project_versions.where('effective_date >= ?', current_date).order(:effective_date).pluck(:id)
-                # version = Version.where(id: version_id).first
-                # version.custom_field_values.each do |custom_field|
-                #   if custom_field.custom_field.name == 'Start Date' && Date.parse(custom_field.value) <= current_date
-                #     ids_list << version.id
-                #     break
-                #   end
-                # end
+                versions_ending_in_the_future = project_versions.order(:effective_date)
+                  .where('effective_date >= ?', current_date)
+                  .select([:id, :effective_date])
+                versions_ending_in_the_future.each do |version|
+                  version.custom_field_values.each do |custom_field|
+                    if custom_field.custom_field.name == 'Start Date' &&
+                      Date.parse(custom_field.value) <= current_date
+                      candidate_versions << version
+                    end
+                  end
+                end
+                ids_list << candidate_versions.min_by { |version| version.effective_date }.id
               else
                 ids_list = project_versions.where(status: version_status.clone).pluck(:id).push(0)
               end
