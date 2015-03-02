@@ -43,7 +43,9 @@ module RedmineTargetVersionStatusFilter
                     end
                   end
                 end
-                ids_list << candidate_versions.min_by { |version| version.effective_date }.id
+                unless candidate_versions.blank?
+                  ids_list << candidate_versions.min_by { |version| version.effective_date }.id
+                end
               else
                 ids_list = project_versions.where(status: version_status.clone).pluck(:id).push(0)
               end
